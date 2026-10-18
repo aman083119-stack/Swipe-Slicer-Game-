@@ -95,7 +95,7 @@ There is **no single fixed Playables resolution to target**. The game uses the v
 - [ ] Run the official YouTube Playables Test Suite with the uploaded build.
 - [ ] Complete Developer Portal metadata and the review / release process.
 
-The local smoke test validates the page structure, SDK integration points, lifecycle call ordering, responsive viewport hooks, and absence of monetization integrations. **It does not replace the official YouTube Test Suite or guarantee certification.**
+The local smoke test validates package structure, SDK script ordering, the presence of core integration hooks, responsive viewport support, and the absence of monetization API calls. **It does not replace the official YouTube Test Suite or guarantee certification.**
 
 ## 🛠 Development and testing
 
