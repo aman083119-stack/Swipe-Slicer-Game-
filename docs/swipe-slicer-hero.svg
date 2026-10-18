@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400" role="img" aria-labelledby="title desc">
+<title id="title">Swipe Slicer — Slice combos, not just shapes</title><desc id="desc">A dark neon arcade banner with glowing geometric shapes and a swipe trail.</desc>
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#090b16"/><stop offset=".55" stop-color="#171538"/><stop offset="1" stop-color="#071a27"/></linearGradient>
+<linearGradient id="trail" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#8c7bff" stop-opacity="0"/><stop offset=".45" stop-color="#54e7f5"/><stop offset="1" stop-color="#fff"/></linearGradient>
+<filter id="glow"><feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<pattern id="grid" width="38" height="38" patternUnits="userSpaceOnUse"><path d="M38 0H0V38" fill="none" stroke="#9aa7ff" stroke-opacity=".09"/></pattern>
+</defs>
+<rect width="1200" height="400" rx="26" fill="url(#bg)"/><rect width="1200" height="400" rx="26" fill="url(#grid)"/>
+<circle cx="1030" cy="62" r="180" fill="#6755ff" opacity=".10"/><circle cx="1120" cy="360" r="210" fill="#35e5f0" opacity=".08"/>
+<g filter="url(#glow)" stroke-width="3">
+<circle cx="880" cy="130" r="42" fill="#ff5c77" fill-opacity=".9" stroke="#ffd2dc"/>
+<path d="M1010 70 1054 145H966Z" fill="#4be3a4" fill-opacity=".9" stroke="#d5ffee"/>
+<path d="M1085 210 1125 250 1085 290 1045 250Z" fill="#55c7ff" fill-opacity=".9" stroke="#d4f4ff"/>
+<path d="M914 265 936 280 928 307 900 307 892 280Z" fill="#ffd45a" fill-opacity=".95" stroke="#fff0bf"/>
+<path d="M760 225 787 240 787 270 760 285 733 270 733 240Z" fill="#b38aff" fill-opacity=".9" stroke="#ede0ff"/>
+</g>
+<path d="M700 320C820 268 895 210 990 168S1110 100 1170 74" fill="none" stroke="url(#trail)" stroke-width="12" stroke-linecap="round" filter="url(#glow)"/><circle cx="700" cy="320" r="7" fill="#8c7bff"/><circle cx="1170" cy="74" r="6" fill="#fff"/>
+<g fill="#f7f8ff" font-family="Inter,Segoe UI,Arial,sans-serif">
+<text x="74" y="86" font-size="17" font-weight="800" letter-spacing="6" fill="#54e7f5">A NEON ARCADE CHALLENGE</text>
+<text x="70" y="178" font-size="75" font-weight="950" letter-spacing="-3">SWIPE</text><text x="70" y="258" font-size="75" font-weight="950" letter-spacing="-3" fill="#54e7f5">SLICER</text>
+<text x="76" y="309" font-size="23" fill="#c5cce8">Slice combos, not just shapes.</text><text x="76" y="353" font-size="14" font-weight="700" letter-spacing="2" fill="#9ba5cc">HTML5 CANVAS  ·  YOUTUBE PLAYABLES  ·  NO ADS</text></g></svg>
