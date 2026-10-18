@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#090b16">
+  <title>Swipe Slicer</title>
+  <!-- YouTube Playables SDK MUST load before any game code. -->
+  <script src="https://www.youtube.com/game_api/v1"></script>
+  <style>
+    :root { color-scheme: dark; --ink: #f7f8ff; --muted: #a9b0d2; --panel: rgba(12, 15, 34, .88); --line: rgba(170, 188, 255, .18); --violet: #8c7bff; --cyan: #54e7f5; }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #090b16; color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; touch-action: none; -webkit-tap-highlight-color: transparent; }
+    body { min-height: 100%; }
+    canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; }
+    #overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom)); background: radial-gradient(ellipse at center, rgba(7, 10, 26, .12), rgba(7, 9, 20, .48)); z-index: 5; }
+    #panel { width: min(100%, 440px); max-height: 92vh; overflow-y: auto; padding: clamp(23px, 5vw, 38px); text-align: center; border: 1px solid var(--line); border-radius: 25px; background: var(--panel); box-shadow: 0 25px 90px rgba(0,0,0,.42), inset 0 1px rgba(255,255,255,.06); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); pointer-events: auto; }
+    .eyebrow { margin: 0 0 12px; color: var(--cyan); font-size: 11px; letter-spacing: .24em; font-weight: 800; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(35px, 9vw, 53px); line-height: .98; letter-spacing: -.055em; font-weight: 950; }
+    h1 span { display: block; color: var(--cyan); text-shadow: 0 0 32px rgba(84,231,245,.23); }
+    .subtitle { margin: 18px auto 0; max-width: 310px; color: #e0e4ff; font-size: 16px; line-height: 1.5; }
+    .description { margin: 10px auto 22px; max-width: 330px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+    .stats { display: flex; justify-content: center; gap: 10px; margin: 20px auto 22px; }
+    .medal-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 7px; margin: 0 auto 19px; }
+    .medal { display: inline-flex; align-items: center; gap: 5px; padding: 7px 9px; border: 1px solid rgba(255,255,255,.10); border-radius: 999px; color: #727b9d; background: rgba(255,255,255,.025); font-size: 10px; font-weight: 800; letter-spacing: .01em; }
+    .medal.unlocked { color: #fff0b8; border-color: rgba(255,209,102,.38); background: rgba(255,209,102,.09); box-shadow: 0 0 18px rgba(255,209,102,.07); }
+    .stat { min-width: 112px; padding: 11px 15px; border: 1px solid rgba(255,255,255,.09); border-radius: 14px; background: rgba(255,255,255,.035); }
+    .stat-label { display:block; color: #9ba5cc; font-size: 10px; text-transform: uppercase; letter-spacing: .15em; font-weight: 800; }
+    .stat-value { display:block; margin-top: 3px; font-weight: 850; font-size: 19px; font-variant-numeric: tabular-nums; }
+    .theme-pill { display: inline-flex; align-items: center; gap: 8px; margin: 0 auto 19px; padding: 8px 12px; border: 1px solid rgba(84,231,245,.20); border-radius: 99px; color: #d5fcff; background: rgba(84,231,245,.07); font-size: 11px; font-weight: 750; letter-spacing: .04em; }
+    .theme-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+    button { appearance: none; border: 0; border-radius: 14px; min-height: 50px; width: 100%; padding: 14px 20px; background: linear-gradient(110deg, #8a78ff, #5577ff); color: #fff; font: inherit; font-size: 14px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; box-shadow: 0 9px 28px rgba(93,106,255,.24); transition: transform .12s ease, filter .12s ease; }
+    button:active { transform: translateY(1px) scale(.99); filter: brightness(1.1); }
+    button:disabled { opacity: .55; cursor: wait; }
+    .secondary { margin-top: 10px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.055); box-shadow: none; color: #e2e7ff; }
+    .hint { margin: 15px 0 0; color: #8992b8; font-size: 11px; line-height: 1.5; }
+    #loadStatus { color: var(--muted); margin: 20px 0 0; font-size: 12px; }
+    .hidden { display: none !important; }
+    .pause-control { position: fixed; z-index: 4; right: max(16px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); width: 48px; min-height: 48px; padding: 0; border: 1px solid rgba(255,255,255,.16); border-radius: 16px; background: rgba(15,18,42,.84); box-shadow: 0 8px 24px rgba(0,0,0,.24); color: #ecf0ff; font-size: 17px; letter-spacing: 0; text-transform: none; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+    .pause-control:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+    @media (max-height: 560px) { #panel { padding: 19px; } .description { margin-bottom: 14px; } .stats { margin: 14px auto; } h1 { font-size: 37px; } }
+    @media (prefers-reduced-motion: reduce) { button { transition: none; } }
+  </style>
+</head>
+<body>
+  <canvas id="game" aria-label="Swipe Slicer game area"></canvas>
+  <button id="pauseControl" class="pause-control hidden" type="button" aria-label="Pause game" title="Pause (P or Escape)">Ⅱ</button>
+  <div id="overlay" role="dialog" aria-modal="true" aria-labelledby="gameTitle">
+    <div id="panel">
+      <p class="eyebrow">A NEON ARCADE CHALLENGE</p>
+      <h1 id="gameTitle">SWIPE <span>SLICER</span></h1>
+      <p class="subtitle">Slice combos, not just shapes.</p>
+      <p id="loadStatus">Loading your game…</p>
+      <button id="startBtn" class="hidden" disabled>Loading…</button>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    'use strict';
+
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const overlay = document.getElementById('overlay');
+    const panel = document.getElementById('panel');
+    const pauseControl = document.getElementById('pauseControl');
+    const loadStatus = document.getElementById('loadStatus');
+
+    // Never replace or shadow the SDK's global namespace.
+    const yt = (typeof window.ytgame !== 'undefined') ? window.ytgame : null;
+    const inPlayablesEnv = Boolean(yt && yt.IN_PLAYABLES_ENV);
+
+    let W = window.innerWidth;
+    let H = window.innerHeight;
+    let dpr = 1;
+    let rafId = null;
+    let lastFrameTime = 0;
+    let firstFrameSent = false;
+    let isBooted = false;
+    let bootDataLoaded = false;
+    let sdkPaused = false;
+    let internallyPaused = false;
+    let audioEnabled = !inPlayablesEnv;
+    let audioContext = null;
+    let localeTag = 'en';
+    let numberFormatter = new Intl.NumberFormat('en');
+    let cloudSaveReady = !inPlayablesEnv;
+    let saveQueue = Promise.resolve(true);
+
+    const COLORS = ['#ff5c77', '#4be3a4', '#55c7ff', '#ffd45a', '#b38aff'];
+    const THEMES = [
+      { name: 'Classic Pulse', shapes: ['circle', 'square', 'triangle'], accent: '#67e8f9' },
+      { name: 'Crystal Rush', shapes: ['diamond', 'hex', 'circle'], accent: '#a78bfa' },
+      { name: 'Stellar Night', shapes: ['star', 'circle', 'square'], accent: '#f9a8d4' },
+      { name: 'Prism Shift', shapes: ['hex', 'diamond', 'triangle'], accent: '#86efac' },
+      { name: 'Solar Pop', shapes: ['star', 'triangle', 'circle'], accent: '#fcd34d' }
+    ];
+    const dayNumber = Math.floor(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()) / 86400000);
+    const dailyTheme = THEMES[((dayNumber % THEMES.length) + THEMES.length) % THEMES.length];
+
+    let shapes = [];
+    let particles = [];
+    let score = 0;
+    let bestScore = 0;
+    let bestChain = 0;
+    let totalSlices = 0;
+    let runSlices = 0;
+    let misses = 0;
+    let gamesPlayed = 0;
+    let feverTime = 0;
+    let feverCount = 0;
+    let gameOver = false;
+    let running = false;
+    let spawnTimer = 0;
+    let elapsed = 0;
+    let comboToast = '';
+    let comboToastTime = 0;
+    let screenFlash = 0;
+    let screenShakeTime = 0;
+    let screenShakePower = 0;
+    let reducedMotion = false;
+    try { reducedMotion = Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) { /* Optional browser preference. */ }
+    const swipe = { active: false, points: [], chainColor: null, chainCount: 0, wildcardLink: false, hitIds: new Set() };
+
+    function resizeCanvas() {
+      if (sdkPaused) return;
+      const nextW = Math.max(1, window.innerWidth);
+      const nextH = Math.max(1, window.innerHeight);
+      const scaleX = W > 0 ? nextW / W : 1;
+      const scaleY = H > 0 ? nextH / H : 1;
+      if (W > 0 && H > 0 && (nextW !== W || nextH !== H)) {
+        const radiusScale = Math.min(scaleX, scaleY);
+        for (const shape of shapes) {
+          shape.x *= scaleX; shape.y *= scaleY; shape.vx *= scaleX; shape.vy *= scaleY;
+          shape.r = Math.max(18, Math.min(32, shape.r * radiusScale));
+        }
+        for (const particle of particles) {
+          particle.x *= scaleX; particle.y *= scaleY; particle.vx *= scaleX; particle.vy *= scaleY;
+        }
+        for (const point of swipe.points) { point.x *= scaleX; point.y *= scaleY; }
+      }
+      W = nextW;
+      H = nextH;
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.max(1, Math.round(W * dpr));
+      canvas.height = Math.max(1, Math.round(H * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+    }
+    window.addEventListener('resize', resizeCanvas, { passive: true });
+    resizeCanvas();
+
+    function logWarning() {
+      try { if (yt && yt.health && typeof yt.health.logWarning === 'function') yt.health.logWarning(); } catch (_) { /* best effort */ }
+    }
+    function logError() {
+      try { if (yt && yt.health && typeof yt.health.logError === 'function') yt.health.logError(); } catch (_) { /* best effort */ }
+    }
+    window.addEventListener('error', () => logError());
+    window.addEventListener('unhandledrejection', () => logError());
+
+    function formatNumber(value) {
+      try { return numberFormatter.format(Math.floor(value)); } catch (_) { return String(Math.floor(value)); }
+    }
+
+    function achievementMarkup() {
+      const medals = [
+        { target: 8, name: 'Chain Adept' },
+        { target: 12, name: 'Chain Virtuoso' },
+        { target: 16, name: 'Chain Legend' }
+      ];
+      return `<div class="medal-row" aria-label="Chain achievements">${medals.map(medal => `<span class="medal ${bestChain >= medal.target ? 'unlocked' : ''}" title="${bestChain >= medal.target ? 'Unlocked' : `Reach a chain of ${medal.target}`}">${bestChain >= medal.target ? '✦' : '◇'} ${medal.target}+ ${medal.name}</span>`).join('')}</div>`;
+    }
+
+    function triggerScreenShake(power = 5) {
+      if (reducedMotion) return;
+      screenShakeTime = Math.max(screenShakeTime, .18);
+      screenShakePower = Math.max(screenShakePower, power);
+    }
+
+    function getSaveObject() {
+      return {
+        version: 2,
+        bestScore: Math.max(0, Math.floor(bestScore)),
+        bestChain: Math.max(0, Math.floor(bestChain)),
+        totalSlices: Math.max(0, Math.floor(totalSlices)),
+        gamesPlayed: Math.max(0, Math.floor(gamesPlayed))
+      };
+    }
+
+    // Normalize saved values without assuming the exact schema of older builds.
+    function applySaveData(raw) {
+      if (!raw) return;
+      let parsed;
+      try { parsed = (typeof raw === 'string') ? JSON.parse(raw) : raw; }
+      catch (_) { logWarning(); return; }
+      if (!parsed || typeof parsed !== 'object') return;
+      const oldBest = Number(parsed.bestScore ?? parsed.best ?? parsed.highScore ?? 0);
+      const oldGames = Number(parsed.gamesPlayed ?? parsed.runs ?? 0);
+      const oldChain = Number(parsed.bestChain ?? parsed.longestChain ?? 0);
+      const oldSlices = Number(parsed.totalSlices ?? parsed.slicedShapes ?? 0);
+      if (Number.isFinite(oldBest) && oldBest >= 0) bestScore = Math.floor(oldBest);
+      if (Number.isFinite(oldGames) && oldGames >= 0) gamesPlayed = Math.floor(oldGames);
+      if (Number.isFinite(oldChain) && oldChain >= 0) bestChain = Math.floor(oldChain);
+      if (Number.isFinite(oldSlices) && oldSlices >= 0) totalSlices = Math.floor(oldSlices);
+    }
+
+    async function loadProgress() {
+      if (inPlayablesEnv) {
+        if (!yt || !yt.game || typeof yt.game.loadData !== 'function') {
+          // Never fall back to browser storage from inside Playables.
+          cloudSaveReady = false;
+          logWarning();
+          return;
+        }
+        try {
+          const raw = await yt.game.loadData();
+          applySaveData(raw);
+          cloudSaveReady = true;
+        } catch (_) {
+          // Do not save cloud data after a failed load; this avoids overwriting older saves.
+          cloudSaveReady = false;
+          logWarning();
+        }
+      } else {
+        cloudSaveReady = true;
+        try { applySaveData(window.localStorage.getItem('SWIPE_SLICER_SAVE_V1')); }
+        catch (_) { /* Local storage is optional outside Playables. */ }
+      }
+    }
+
+    function persistProgress(options = {}) {
+      const snapshot = getSaveObject();
+      const scoreToSubmit = snapshot.bestScore;
+      const shouldSubmitScore = Boolean(options.submitScore && inPlayablesEnv);
+      if (inPlayablesEnv && !cloudSaveReady) return Promise.resolve(false);
+
+      const task = async () => {
+        if (inPlayablesEnv) {
+          if (!yt || !yt.game || typeof yt.game.saveData !== 'function') return false;
+          try {
+            await yt.game.saveData(JSON.stringify(snapshot));
+          } catch (_) {
+            logWarning();
+            return false;
+          }
+          // Submit only after the matching best score has been saved successfully.
+          if (shouldSubmitScore && yt.engagement && typeof yt.engagement.sendScore === 'function') {
+            try { await yt.engagement.sendScore({ value: scoreToSubmit }); }
+            catch (_) { logWarning(); }
+          }
+          return true;
+        }
+        try { window.localStorage.setItem('SWIPE_SLICER_SAVE_V1', JSON.stringify(snapshot)); }
+        catch (_) { /* Memory-only play is still supported. */ }
+        return true;
+      };
+
+      const result = saveQueue.then(task, task);
+      saveQueue = result.catch(() => false);
+      return result;
+    }
+
+    function setupSDKCallbacks() {
+      if (!yt || !yt.system) return;
+      try {
+        if (typeof yt.system.isAudioEnabled === 'function') audioEnabled = Boolean(yt.system.isAudioEnabled());
+      } catch (_) { audioEnabled = false; logWarning(); }
+
+      if (typeof yt.system.onAudioEnabledChange === 'function') {
+        try {
+          yt.system.onAudioEnabledChange((enabled) => {
+            audioEnabled = Boolean(enabled);
+            if (!audioEnabled && audioContext && audioContext.state === 'running') {
+              audioContext.suspend().catch(() => {});
+            }
+          });
+        } catch (_) { logWarning(); }
+      }
+      if (typeof yt.system.onPause === 'function') {
+        try {
+          yt.system.onPause(() => {
+            if (sdkPaused) return;
+            sdkPaused = true;
+            // Close an in-progress swipe, freeze all play capabilities and save progress.
+            endSwipe();
+            stopLoop();
+            if (audioContext && audioContext.state === 'running') audioContext.suspend().catch(() => {});
+            pauseControl.classList.add('hidden');
+            persistProgress();
+          });
+        } catch (_) { logWarning(); }
+      }
+      if (typeof yt.system.onResume === 'function') {
+        try {
+          yt.system.onResume(() => {
+            sdkPaused = false;
+            resizeCanvas();
+            lastFrameTime = 0;
+            if (bootDataLoaded && !isBooted) showMainMenu();
+            if (audioEnabled && !internallyPaused && audioContext && audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+            if (running && !internallyPaused && !gameOver) pauseControl.classList.remove('hidden');
+            startLoop();
+          });
+        } catch (_) { logWarning(); }
+      }
+    }
+
+    async function getPlayerLanguage() {
+      if (!yt || !yt.system || typeof yt.system.getLanguage !== 'function') return;
+      try {
+        const language = await yt.system.getLanguage();
+        if (typeof language === 'string' && language.length) {
+          localeTag = language;
+          try { numberFormatter = new Intl.NumberFormat(localeTag); } catch (_) { numberFormatter = new Intl.NumberFormat('en'); }
+          document.documentElement.lang = localeTag;
+        }
+      } catch (_) { logWarning(); }
+    }
+
+    function notifyFirstFrameReady() {
+      if (firstFrameSent) return;
+      firstFrameSent = true;
+      if (yt && yt.game && typeof yt.game.firstFrameReady === 'function') {
+        try { yt.game.firstFrameReady(); } catch (_) { logError(); }
+      }
+    }
+
+    function notifyGameReady() {
+      if (yt && yt.game && typeof yt.game.gameReady === 'function') {
+        try { yt.game.gameReady(); } catch (_) { logError(); }
+      }
+    }
+
+    function showMainMenu() {
+      if (sdkPaused) return;
+      running = false;
+      internallyPaused = false;
+      gameOver = false;
+      shapes = [];
+      particles = [];
+      pauseControl.classList.add('hidden');
+      overlay.style.display = 'flex';
+      panel.innerHTML = `
+        <p class="eyebrow">A NEON ARCADE CHALLENGE</p>
+        <h1 id="gameTitle">SWIPE <span>SLICER</span></h1>
+        <p class="subtitle">Slice combos, not just shapes.</p>
+        <p class="description">Swipe through same-color shapes in one continuous move to build bigger chains. Avoid bombs and don't miss three shapes.</p>
+        <div class="theme-pill"><span class="theme-dot" style="background:${dailyTheme.accent};box-shadow:0 0 12px ${dailyTheme.accent}"></span> TODAY'S THEME · ${dailyTheme.name.toUpperCase()}</div>
+        <div class="stats"><div class="stat"><span class="stat-label">Best score</span><span class="stat-value">${formatNumber(bestScore)}</span></div><div class="stat"><span class="stat-label">Longest chain</span><span class="stat-value">×${formatNumber(bestChain)}</span></div></div>
+        ${achievementMarkup()}
+        <button id="startBtn" type="button">Start slicing</button>
+        <p class="hint">Touch: swipe · Desktop: click and drag<br>Prism shapes bridge colors. Reach a ×6 chain to trigger Fever Mode.<br>Press P or Escape to pause.</p>`;
+      pauseControl.classList.add('hidden');
+      panel.querySelector('#startBtn').addEventListener('click', startGame);
+      if (!isBooted) { isBooted = true; notifyGameReady(); }
+    }
+
+    async function boot() {
+      setupSDKCallbacks();
+      // Cloud load completes before any save request may run.
+      await Promise.all([loadProgress(), getPlayerLanguage()]);
+      bootDataLoaded = true;
+      if (!sdkPaused) showMainMenu();
+    }
+
+    class Shape {
+      constructor(id, x, y, vx, vy, color, type, bomb = false) {
+        this.id = id; this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+        this.color = color; this.type = type; this.bomb = bomb; this.wildcard = type === 'prism'; this.r = Math.max(20, Math.min(30, W * .037));
+        this.rotation = Math.random() * Math.PI * 2; this.spin = (Math.random() - .5) * 2.8;
+        this.sliced = false;
+      }
+      update(dt) {
+        this.vy += 900 * dt;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.rotation += this.spin * dt;
+      }
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        const r = this.r;
+        if (this.wildcard && !this.bomb) {
+          const prismFill = ctx.createLinearGradient(-r, -r, r, r);
+          prismFill.addColorStop(0, '#ff7bba'); prismFill.addColorStop(.25, '#ffd166');
+          prismFill.addColorStop(.5, '#66f0d0'); prismFill.addColorStop(.75, '#71a7ff'); prismFill.addColorStop(1, '#bc86ff');
+          ctx.fillStyle = prismFill;
+        } else ctx.fillStyle = this.bomb ? '#171a2c' : this.color;
+        ctx.strokeStyle = this.bomb ? '#ff5c77' : 'rgba(255,255,255,.82)';
+        ctx.lineWidth = this.bomb ? 3 : (this.wildcard ? 2.6 : 1.8);
+        ctx.shadowColor = this.bomb ? '#ff365f' : this.color;
+        ctx.shadowBlur = this.bomb ? 18 : (this.wildcard ? 24 : 16);
+        ctx.beginPath();
+        if (this.bomb) {
+          ctx.arc(0, 0, r * .9, 0, Math.PI * 2);
+        } else if (this.type === 'prism') {
+          ctx.moveTo(0, -r); ctx.lineTo(r * .78, -r * .35); ctx.lineTo(r * .68, r * .72);
+          ctx.lineTo(0, r); ctx.lineTo(-r * .68, r * .72); ctx.lineTo(-r * .78, -r * .35); ctx.closePath();
+        } else if (this.type === 'square') {
+          ctx.rect(-r * .82, -r * .82, r * 1.64, r * 1.64);
+        } else if (this.type === 'triangle') {
+          ctx.moveTo(0, -r); ctx.lineTo(r * .91, r * .78); ctx.lineTo(-r * .91, r * .78); ctx.closePath();
+        } else if (this.type === 'diamond') {
+          ctx.moveTo(0, -r); ctx.lineTo(r * .76, 0); ctx.lineTo(0, r); ctx.lineTo(-r * .76, 0); ctx.closePath();
+        } else if (this.type === 'hex') {
+          for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i; const px = Math.cos(a) * r; const py = Math.sin(a) * r; if (!i) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+          ctx.closePath();
+        } else if (this.type === 'star') {
+          for (let i = 0; i < 10; i++) { const rr = i % 2 ? r * .44 : r; const a = -Math.PI / 2 + i * Math.PI / 5; const px = Math.cos(a) * rr; const py = Math.sin(a) * rr; if (!i) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+          ctx.closePath();
+        } else {
+          ctx.arc(0, 0, r * .88, 0, Math.PI * 2);
+        }
+        ctx.fill(); ctx.stroke();
+        ctx.shadowBlur = 0;
+        if (this.bomb) {
+          ctx.strokeStyle = '#ff9aac'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(r * .2, -r * .7); ctx.quadraticCurveTo(r * .75, -r * 1.18, r * .5, -r * 1.3); ctx.stroke();
+          ctx.fillStyle = '#fff'; ctx.font = `900 ${r * 1.05}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('!', 0, 1);
+        } else {
+          ctx.globalAlpha = .24; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(-r * .24, -r * .28, r * .22, r * .1, -.7, 0, Math.PI * 2); ctx.fill();
+          if (this.wildcard) {
+            ctx.globalAlpha = .9; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath();
+            ctx.moveTo(-r * .3, 0); ctx.lineTo(r * .3, 0); ctx.moveTo(0, -r * .3); ctx.lineTo(0, r * .3); ctx.stroke();
+          }
+        }
+        ctx.restore();
+      }
+    }
+
+    function spawnShape(xOverride, colorOverride, forcedType = null, forcedBomb = null) {
+      const margin = Math.min(60, W * .1);
+      const x = xOverride ?? (margin + Math.random() * Math.max(1, W - margin * 2));
+      const vx = (Math.random() * 390 - 195) + (xOverride == null ? 0 : (x - W / 2) * .16);
+      const vy = -(760 + Math.random() * 340 + Math.min(170, elapsed * 1.1));
+      const bombChance = Math.min(.12, .035 + elapsed * .00038);
+      const bomb = forcedBomb == null ? Math.random() < bombChance : forcedBomb;
+      const color = colorOverride || COLORS[Math.floor(Math.random() * COLORS.length)];
+      const type = bomb ? 'circle' : (forcedType || (Math.random() < .055 ? 'prism' : dailyTheme.shapes[Math.floor(Math.random() * dailyTheme.shapes.length)]));
+      shapes.push(new Shape(`${Math.random().toString(36).slice(2)}-${performance.now()}`, x, H + 40, vx, vy, color, type, bomb));
+    }
+
+    function spawnVolley() {
+      const margin = Math.min(70, W * .12);
+      const center = margin + Math.random() * Math.max(1, W - margin * 2);
+      const count = elapsed < 8 ? (Math.random() < .62 ? 2 : 1) : (Math.random() < .28 ? 3 : (Math.random() < .82 ? 2 : 1));
+      const chainColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+      const sameColorVolley = Math.random() < .72;
+      const spacing = Math.min(62, Math.max(38, W * .095));
+      for (let i = 0; i < count; i++) {
+        const offset = (i - (count - 1) / 2) * spacing;
+        const sameColor = sameColorVolley || i === 0;
+        const color = sameColor ? chainColor : COLORS[Math.floor(Math.random() * COLORS.length)];
+        // Bombs only appear as isolated launches, not inside the beginner-friendly same-color volley.
+        const bombAllowed = count === 1 || (!sameColorVolley && i === count - 1);
+        spawnShape(Math.max(24, Math.min(W - 24, center + offset)), color, null, bombAllowed ? null : false);
+      }
+    }
+
+    function addParticles(x, y, color, amount = 18) {
+      for (let i = 0; i < amount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 65 + Math.random() * 300;
+        particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: .35 + Math.random() * .45, maxLife: .8, size: 1.5 + Math.random() * 3.5, color });
+      }
+    }
+
+    function distanceToSegment(px, py, x1, y1, x2, y2) {
+      const dx = x2 - x1, dy = y2 - y1, len2 = dx * dx + dy * dy;
+      let t = ((px - x1) * dx + (py - y1) * dy) / (len2 || 1);
+      t = Math.max(0, Math.min(1, t));
+      return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+    }
+
+    function ensureAudio() {
+      if (!audioEnabled || sdkPaused) return;
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        if (!audioContext) audioContext = new AudioCtx();
+        if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+      } catch (_) { /* Sound is optional. */ }
+    }
+
+    function playSliceSound(chainCount, isBomb = false) {
+      if (!audioEnabled || sdkPaused || !audioContext || audioContext.state !== 'running') return;
+      try {
+        const now = audioContext.currentTime;
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.type = isBomb ? 'sawtooth' : 'sine';
+        osc.frequency.setValueAtTime(isBomb ? 95 : Math.min(1040, 370 + chainCount * 75), now);
+        osc.frequency.exponentialRampToValueAtTime(isBomb ? 48 : Math.min(1250, 560 + chainCount * 80), now + .055);
+        gain.gain.setValueAtTime(.0001, now);
+        gain.gain.exponentialRampToValueAtTime(isBomb ? .1 : .055, now + .008);
+        gain.gain.exponentialRampToValueAtTime(.0001, now + (isBomb ? .22 : .095));
+        osc.connect(gain); gain.connect(audioContext.destination);
+        osc.start(now); osc.stop(now + (isBomb ? .23 : .1));
+      } catch (_) { /* Sound is non-essential; never interrupt play. */ }
+    }
+
+    function updateBestChain() {
+      if (swipe.chainCount > bestChain) bestChain = swipe.chainCount;
+    }
+
+    function activateFever() {
+      if (feverTime > 0) return;
+      feverTime = 4;
+      feverCount++;
+      screenFlash = Math.max(screenFlash, .32);
+      triggerScreenShake(8);
+      comboToast = 'CHROMATIC FEVER · SCORE ×2';
+      comboToastTime = 1.5;
+    }
+
+    function bankCombo() {
+      if (swipe.chainCount <= 0) return;
+      const n = swipe.chainCount;
+      const raw = Math.floor(10 * n * (1 + (n - 1) * .5));
+      const gained = raw * (feverTime > 0 ? 2 : 1);
+      score += gained;
+      if (n >= 4) triggerScreenShake(n >= 8 ? 9 : 5);
+      comboToast = n >= 6 ? `FEVER CHAIN ×${n}  +${formatNumber(gained)}` : n >= 4 ? `PERFECT CHAIN ×${n}  +${formatNumber(gained)}` : n > 1 ? `CHAIN ×${n}  +${formatNumber(gained)}` : `+${formatNumber(gained)}`;
+      comboToastTime = 1.1;
+      swipe.chainCount = 0;
+      swipe.chainColor = null;
+      swipe.wildcardLink = false;
+      if (score > bestScore) {
+        bestScore = score;
+        persistProgress({ submitScore: true });
+      } else {
+        persistProgress();
+      }
+    }
+
+    function endSwipe() {
+      if (!swipe.active && swipe.chainCount <= 0 && swipe.points.length === 0) return;
+      swipe.active = false;
+      bankCombo();
+      swipe.points.length = 0;
+      swipe.hitIds.clear();
+    }
+
+    function finishRun(reason) {
+      if (gameOver) return;
+      endSwipe();
+      gameOver = true;
+      running = false;
+      screenFlash = reason === 'bomb' ? .5 : .18;
+      const reasonText = reason === 'bomb' ? 'You sliced a bomb.' : 'Three shapes escaped.';
+      overlay.style.display = 'flex';
+      pauseControl.classList.add('hidden');
+      internallyPaused = false;
+      panel.innerHTML = `
+        <p class="eyebrow">RUN COMPLETE</p>
+        <h1>${reason === 'bomb' ? 'BOOM!' : 'GAME <span>OVER</span>'}</h1>
+        <p class="subtitle">${reasonText}</p>
+        <div class="stats"><div class="stat"><span class="stat-label">Your score</span><span class="stat-value">${formatNumber(score)}</span></div><div class="stat"><span class="stat-label">Best score</span><span class="stat-value">${formatNumber(bestScore)}</span></div></div>
+        <p class="description">Run slices: ${formatNumber(runSlices)} · Fever activations: ${formatNumber(feverCount)}<br>Longest chain: ×${formatNumber(bestChain)}</p>
+        ${achievementMarkup()}
+        <button id="startBtn" type="button">Play again</button>
+        <p class="hint">Daily theme · ${dailyTheme.name}<br>Prisms link colors. Six same-color shapes trigger Fever Mode.</p>`;
+      panel.querySelector('#startBtn').addEventListener('click', startGame);
+      persistProgress();
+    }
+
+    function update(dt) {
+      if (!running || sdkPaused || internallyPaused || gameOver) return;
+      elapsed += dt;
+      feverTime = Math.max(0, feverTime - dt);
+      spawnTimer -= dt;
+      const spawnInterval = Math.max(.42, 1.12 - elapsed * .0034);
+      if (spawnTimer <= 0) {
+        spawnTimer = spawnInterval;
+        spawnVolley();
+      }
+      for (const shape of shapes) shape.update(dt);
+      for (const p of particles) {
+        p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 380 * dt; p.vx *= Math.max(0, 1 - dt * 1.2);
+      }
+      particles = particles.filter(p => p.life > 0);
+      shapes = shapes.filter(shape => {
+        if (!shape.sliced && shape.y > H + 72) {
+          if (!shape.bomb && !gameOver) {
+            misses = Math.min(3, misses + 1);
+            if (misses >= 3) finishRun('missed');
+          }
+          return false;
+        }
+        return !shape.sliced;
+      });
+      comboToastTime = Math.max(0, comboToastTime - dt);
+      screenFlash = Math.max(0, screenFlash - dt);
+      screenShakeTime = Math.max(0, screenShakeTime - dt);
+      if (screenShakeTime === 0) screenShakePower = 0;
+    }
+
+    function drawBackground() {
+      const gradient = ctx.createLinearGradient(0, 0, W * .85, H);
+      gradient.addColorStop(0, '#171936');
+      gradient.addColorStop(.55, '#0c1024');
+      gradient.addColorStop(1, '#080a15');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, W, H);
+      const glow = ctx.createRadialGradient(W * .5, H * .23, 0, W * .5, H * .23, Math.max(W, H) * .7);
+      glow.addColorStop(0, feverTime > 0 ? 'rgba(255,111,198,.17)' : `${dailyTheme.accent}12`);
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(139,157,230,.045)'; ctx.lineWidth = 1;
+      const gap = 44;
+      for (let x = (W % gap); x < W; x += gap) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+      for (let y = (H % gap); y < H; y += gap) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+      ctx.restore();
+    }
+
+    function drawHUD() {
+      const pad = Math.max(18, Math.min(28, W * .04));
+      ctx.save();
+      ctx.textBaseline = 'top';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = 'rgba(244,247,255,.66)'; ctx.font = '800 10px system-ui'; ctx.fillText('SCORE', pad, pad);
+      ctx.fillStyle = '#ffffff'; ctx.font = `900 ${Math.min(29, Math.max(22, W * .07))}px system-ui`; ctx.fillText(formatNumber(score), pad, pad + 14);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = 'rgba(244,247,255,.62)'; ctx.font = '800 10px system-ui'; ctx.fillText('BEST', W - pad, pad);
+      ctx.fillStyle = '#d9ddff'; ctx.font = '850 19px system-ui'; ctx.fillText(formatNumber(bestScore), W - pad, pad + 16);
+      const barW = Math.min(150, W * .36);
+      ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(244,247,255,.62)'; ctx.font = '800 10px system-ui'; ctx.fillText('MISSES', pad, pad + 53);
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = i < misses ? 'rgba(255,92,119,.28)' : '#ff5c77'; ctx.fillRect(pad + i * 23, pad + 70, 17, 5);
+      }
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#a9b0d2'; ctx.font = '800 10px system-ui'; ctx.fillText(dailyTheme.name.toUpperCase(), W / 2, H - 22);
+      if (feverTime > 0) {
+        const meterWidth = Math.min(210, W * .48);
+        ctx.fillStyle = 'rgba(255,255,255,.13)'; ctx.fillRect(W / 2 - meterWidth / 2, pad + 4, meterWidth, 4);
+        const feverGradient = ctx.createLinearGradient(W / 2 - meterWidth / 2, 0, W / 2 + meterWidth / 2, 0);
+        feverGradient.addColorStop(0, '#ff78b7'); feverGradient.addColorStop(1, '#ffd166');
+        ctx.fillStyle = feverGradient; ctx.fillRect(W / 2 - meterWidth / 2, pad + 4, meterWidth * Math.min(1, feverTime / 4), 4);
+        ctx.fillStyle = '#ffb6dc'; ctx.font = '900 10px system-ui'; ctx.fillText('CHROMATIC FEVER · ×2 SCORE', W / 2, pad + 12);
+      }
+      if (swipe.chainCount > 1) {
+        ctx.font = `950 ${Math.min(31, Math.max(24, W * .075))}px system-ui`;
+        ctx.fillStyle = swipe.chainColor || '#fff'; ctx.shadowColor = swipe.chainColor || '#fff'; ctx.shadowBlur = 20;
+        ctx.fillText(`CHAIN ×${swipe.chainCount}`, W / 2, pad + 20);
+        ctx.shadowBlur = 0;
+      }
+      if (comboToastTime > 0) {
+        ctx.globalAlpha = Math.min(1, comboToastTime * 2);
+        ctx.font = `900 ${Math.min(18, Math.max(13, W * .045))}px system-ui`;
+        ctx.fillStyle = '#fff'; ctx.shadowColor = dailyTheme.accent; ctx.shadowBlur = 14;
+        ctx.fillText(comboToast, W / 2, H * .19 - (1.1 - comboToastTime) * 18);
+        ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+      }
+      ctx.restore();
+    }
+
+    function draw() {
+      const shake = screenShakeTime > 0 && !reducedMotion ? screenShakePower * Math.min(1, screenShakeTime / .18) : 0;
+      ctx.save();
+      if (shake > 0) ctx.translate((Math.random() - .5) * shake * 2, (Math.random() - .5) * shake * 2);
+      drawBackground();
+      for (const shape of shapes) shape.draw();
+      for (const p of particles) {
+        ctx.save(); ctx.globalAlpha = Math.max(0, p.life / p.maxLife); ctx.fillStyle = p.color; ctx.shadowColor = p.color; ctx.shadowBlur = 9;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      }
+      if (swipe.points.length > 1) {
+        ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(226,250,255,.94)'; ctx.lineWidth = Math.max(3, Math.min(6, W * .012)); ctx.shadowColor = '#54e7f5'; ctx.shadowBlur = 18;
+        ctx.beginPath(); ctx.moveTo(swipe.points[0].x, swipe.points[0].y);
+        for (let i = 1; i < swipe.points.length; i++) ctx.lineTo(swipe.points[i].x, swipe.points[i].y);
+        ctx.stroke(); ctx.restore();
+      }
+      ctx.restore();
+      drawHUD();
+      if (screenFlash > 0) { ctx.fillStyle = `rgba(255,64,104,${screenFlash * .32})`; ctx.fillRect(0, 0, W, H); }
+    }
+
+    function loop(timestamp) {
+      rafId = null;
+      if (sdkPaused) return;
+      const dt = lastFrameTime ? Math.min(.033, (timestamp - lastFrameTime) / 1000) : 0;
+      lastFrameTime = timestamp;
+      update(dt);
+      draw();
+      if (!firstFrameSent) {
+        notifyFirstFrameReady();
+        // Wait for save data and language initialization before enabling the menu.
+        boot().catch(() => { logError(); showMainMenu(); });
+      }
+      if (!sdkPaused) rafId = window.requestAnimationFrame(loop);
+    }
+
+    function startLoop() {
+      if (sdkPaused || rafId !== null) return;
+      lastFrameTime = 0;
+      rafId = window.requestAnimationFrame(loop);
+    }
+    function stopLoop() {
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
+      rafId = null;
+      lastFrameTime = 0;
+    }
+
+    function startGame() {
+      if (sdkPaused || !isBooted) return;
+      ensureAudio();
+      score = 0; misses = 0; elapsed = 0; spawnTimer = 0; feverTime = 0; feverCount = 0; runSlices = 0;
+      shapes = []; particles = []; gameOver = false; running = true; internallyPaused = false;
+      swipe.active = false; swipe.points.length = 0; swipe.hitIds.clear(); swipe.chainColor = null; swipe.chainCount = 0; swipe.wildcardLink = false;
+      comboToast = ''; comboToastTime = 0; screenFlash = 0;
+      gamesPlayed++;
+      overlay.style.display = 'none';
+      pauseControl.classList.remove('hidden');
+      persistProgress();
+    }
+
+    function pauseGame() {
+      if (!running || gameOver || sdkPaused || internallyPaused) return;
+      internallyPaused = true;
+      endSwipe();
+      if (audioContext && audioContext.state === 'running') audioContext.suspend().catch(() => {});
+      pauseControl.classList.add('hidden');
+      overlay.style.display = 'flex';
+      panel.innerHTML = `
+        <p class="eyebrow">TAKE A BREATH</p>
+        <h1>GAME <span>PAUSED</span></h1>
+        <p class="subtitle">Your run is safe. Jump back in when you're ready.</p>
+        <div class="stats"><div class="stat"><span class="stat-label">Score</span><span class="stat-value">${formatNumber(score)}</span></div><div class="stat"><span class="stat-label">Longest chain</span><span class="stat-value">×${formatNumber(bestChain)}</span></div></div>
+        <button id="resumeBtn" type="button">Resume run</button>
+        <p class="hint">Press P or Escape to resume.</p>`;
+      panel.querySelector('#resumeBtn').addEventListener('click', resumeGame);
+      persistProgress();
+    }
+
+    function resumeGame() {
+      if (!internallyPaused || sdkPaused) return;
+      internallyPaused = false;
+      overlay.style.display = 'none';
+      pauseControl.classList.remove('hidden');
+      if (audioEnabled && audioContext && audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+      lastFrameTime = 0;
+    }
+
+    pauseControl.addEventListener('click', pauseGame);
+    window.addEventListener('keydown', event => {
+      if (event.key === 'Escape' || event.key.toLowerCase() === 'p') {
+        if (internallyPaused) resumeGame();
+        else if (running && !gameOver) pauseGame();
+        else if (gameOver && !sdkPaused) showMainMenu();
+      } else if ((event.key === 'Enter' || event.key === ' ') && !running && !internallyPaused && isBooted && !gameOver) {
+        // Keyboard users can start from the title screen; no key is cancelled or trapped.
+        if (overlay.style.display !== 'none') startGame();
+      }
+    });
+
+    function pointerPos(event) { return { x: event.clientX, y: event.clientY }; }
+    canvas.addEventListener('pointerdown', event => {
+      if (!running || gameOver || sdkPaused || internallyPaused) return;
+      ensureAudio();
+      swipe.active = true;
+      swipe.points = [pointerPos(event)];
+      swipe.hitIds.clear();
+      try { canvas.setPointerCapture(event.pointerId); } catch (_) { /* Pointer capture is best effort. */ }
+    });
+    canvas.addEventListener('pointermove', event => {
+      if (!swipe.active || !running || gameOver || sdkPaused || internallyPaused) return;
+      const p = pointerPos(event);
+      const prev = swipe.points[swipe.points.length - 1];
+      swipe.points.push(p);
+      if (swipe.points.length > 22) swipe.points.shift();
+      for (const shape of shapes) {
+        if (gameOver || !running) break;
+        if (swipe.hitIds.has(shape.id) || shape.sliced) continue;
+        const radius = shape.r * (shape.bomb ? .95 : 1.03);
+        if (distanceToSegment(shape.x, shape.y, prev.x, prev.y, p.x, p.y) <= radius) {
+          swipe.hitIds.add(shape.id);
+          if (shape.bomb) {
+            addParticles(shape.x, shape.y, '#ff5c77', 27);
+            playSliceSound(swipe.chainCount, true);
+            finishRun('bomb');
+            break;
+          }
+          if (shape.wildcard) {
+            if (swipe.chainCount <= 0) { swipe.chainCount = 1; swipe.chainColor = null; }
+            else swipe.chainCount++;
+            swipe.wildcardLink = true;
+          } else if (swipe.wildcardLink) {
+            swipe.chainColor = shape.color;
+            swipe.chainCount++;
+            swipe.wildcardLink = false;
+          } else if (swipe.chainColor === shape.color) swipe.chainCount++;
+          else { bankCombo(); swipe.chainColor = shape.color; swipe.chainCount = 1; }
+          shape.sliced = true;
+          runSlices++; totalSlices++;
+          addParticles(shape.x, shape.y, shape.wildcard ? '#d4b5ff' : shape.color, shape.wildcard ? 30 : 18);
+          updateBestChain();
+          if (swipe.chainCount >= 6) activateFever();
+          playSliceSound(swipe.chainCount);
+        }
+      }
+    });
+    canvas.addEventListener('pointerup', endSwipe);
+    canvas.addEventListener('pointercancel', endSwipe);
+    canvas.addEventListener('lostpointercapture', endSwipe);
+
+    // Bootstrap after the first canvas frame so YouTube can remove its loading spinner.
+    startLoop();
+  })();
+  </script>
+</body>
+</html>
