@@ -1,0 +1,12 @@
+{
+  "name": "swipe-slicer-playables",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A responsive neon color-chain arcade game with YouTube Playables SDK integration.",
+  "scripts": {
+    "test": "node tests/smoke-test.cjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
