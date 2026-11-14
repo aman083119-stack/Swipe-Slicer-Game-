@@ -10,6 +10,14 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>/);
 assert.ok(scriptMatch, 'index.html must contain the game script');
 const gameScript = scriptMatch[1];
+const renderer3dPath = path.join(root, 'renderer3d.js');
+assert.ok(fs.existsSync(renderer3dPath), 'the 3D renderer file must be included in the root bundle');
+const renderer3dSource = fs.readFileSync(renderer3dPath, 'utf8');
+assert.ok(html.includes('<canvas id="scene3d"'), 'the game must include its WebGL scene canvas');
+assert.ok(html.includes('<script src="./renderer3d.js"></script>'), 'the game must load the local WebGL renderer');
+assert.ok(/getContext\\('webgl'/.test(renderer3dSource), 'renderer must request standard WebGL');
+assert.ok(/compileShader/.test(renderer3dSource) && /drawArrays/.test(renderer3dSource), 'renderer must compile shaders and draw 3D geometry');
+assert.ok(/getRenderScale/.test(renderer3dSource), 'renderer must expose adaptive framebuffer scale');
 
 // Static guardrails for packaging and monetization-free delivery.
 assert.ok(html.includes('<script src="https://www.youtube.com/game_api/v1"></script>'), 'Playables SDK script must be present');
@@ -70,9 +78,33 @@ const ctx = {
   closePath() {}, arc() {}, rect() {}, ellipse() {}, fill() {}, stroke() {}, quadraticCurveTo() {}, fillText() {}
 };
 
+
+const glCalls = { drawArrays: 0, meshDraws: 0, centers: [] };
+const fakeGL = {
+  VERTEX_SHADER:1, FRAGMENT_SHADER:2, COMPILE_STATUS:3, LINK_STATUS:4,
+  ARRAY_BUFFER:5, STATIC_DRAW:6, FLOAT:7, TRIANGLE_STRIP:8, TRIANGLES:9,
+  DEPTH_TEST:10, BLEND:11, LEQUAL:12, COLOR_BUFFER_BIT:1, DEPTH_BUFFER_BIT:2,
+  SRC_ALPHA:13, ONE_MINUS_SRC_ALPHA:14, MAX_RENDERBUFFER_SIZE:15,
+  createShader(type) { return { type }; }, shaderSource() {}, compileShader() {},
+  getShaderParameter() { return true; }, getShaderInfoLog() { return ''; }, deleteShader() {},
+  createProgram() { return {}; }, attachShader() {}, linkProgram() {},
+  getProgramParameter() { return true; }, getProgramInfoLog() { return ''; }, deleteProgram() {},
+  getAttribLocation(_p, name) { return name === 'aNormal' ? 1 : 0; },
+  getUniformLocation(_p, name) { return { name }; },
+  createBuffer() { return {}; }, bindBuffer() {}, bufferData() {}, viewport() {},
+  getParameter() { return 8192; }, disable() {}, enable() {}, useProgram() {},
+  enableVertexAttribArray() {}, vertexAttribPointer() {}, uniform2f(location, x, y) {
+    if (location && location.name === 'uCenter') glCalls.centers.push({ x, y });
+  },
+  uniform1f() {}, uniform3fv() {}, uniform3f() {}, clearColor() {}, clear() {},
+  drawArrays(mode) { glCalls.drawArrays++; if (mode === this.TRIANGLES) glCalls.meshDraws++; },
+  depthFunc() {}, isContextLost() { return false; }, clearDepth() {}, blendFunc() {}
+};
+
 const els = Object.create(null);
-for (const id of ['game', 'overlay', 'panel', 'pauseControl', 'loadStatus', 'startBtn']) els[id] = new FakeElement(id);
+for (const id of ['game', 'scene3d', 'overlay', 'panel', 'pauseControl', 'loadStatus', 'startBtn']) els[id] = new FakeElement(id);
 els.game.getContext = () => ctx;
+els.scene3d.getContext = () => fakeGL;
 els.game.setPointerCapture = () => {};
 els.overlay.style.display = 'flex';
 els.pauseControl.classList.add('hidden');
@@ -106,7 +138,7 @@ const ytgame = {
   health: { logWarning() { calls.warnings++; }, logError() { calls.errors++; } }
 };
 const window = {
-  innerWidth: 720, innerHeight: 900, devicePixelRatio: 2, ytgame,
+  innerWidth: 720, innerHeight: 900, devicePixelRatio: 2, ytgame, performance: { now: () => ++now },
   addEventListener(name, callback) { (windowListeners[name] ||= []).push(callback); },
   requestAnimationFrame(callback) { const id = ++rafId; rafs.set(id, callback); return id; },
   cancelAnimationFrame(id) { rafs.delete(id); },
@@ -115,6 +147,7 @@ const window = {
 const document = { documentElement: { lang: 'en' }, getElementById(id) { return els[id] ||= new FakeElement(id); } };
 const sandbox = { window, document, console, Math: math, performance: { now: () => ++now }, Intl, Date, JSON, Promise, Set, Map, Number, String, Boolean, Object, Array, Error };
 vm.createContext(sandbox);
+vm.runInContext(renderer3dSource, sandbox, { filename: 'renderer3d.js', timeout: 3000 });
 vm.runInContext(gameScript, sandbox, { filename: 'index.html:inline-game.js', timeout: 3000 });
 
 const sleepMicrotasks = async () => {
@@ -124,6 +157,7 @@ const sleepMicrotasks = async () => {
 };
 function frame(timestamp) {
   assert.ok(rafs.size > 0, 'expected an animation frame to be scheduled');
+  glCalls.centers = [];
   const [id, callback] = rafs.entries().next().value;
   rafs.delete(id);
   ctx.translations = [];
@@ -131,7 +165,7 @@ function frame(timestamp) {
 }
 function uniquePositions() {
   const positions = [];
-  for (const p of ctx.translations) if (!positions.some(q => Math.abs(q.x - p.x) < 1 && Math.abs(q.y - p.y) < 1)) positions.push(p);
+  for (const p of glCalls.centers) if (!positions.some(q => Math.abs(q.x - p.x) < 1 && Math.abs(q.y - p.y) < 1)) positions.push(p);
   return positions;
 }
 
@@ -199,7 +233,8 @@ function uniquePositions() {
   audioCallback(false);
   audioCallback(true);
   assert.equal(calls.errors, 0, 'runtime should not report mock-environment errors');
-  console.log('PASS: package structure, SDK order/readiness, cloud saves, score sync, responsive resize, input scoring, pause/resume, audio callback, and no-ad guardrails.');
+  assert.ok(glCalls.drawArrays > 20 && glCalls.meshDraws > 0, 'WebGL background and 3D mesh draws should execute');
+  console.log('PASS: package structure, SDK order/readiness, WebGL shader/mesh rendering, cloud saves, score sync, responsive resize, input scoring, pause/resume, audio callback, and no-ad guardrails.');
 })().catch(error => {
   console.error(error.stack || error);
   process.exitCode = 1;
