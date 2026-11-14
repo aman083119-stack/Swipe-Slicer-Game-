@@ -189,14 +189,17 @@ function uniquePositions() {
   assert.ok(positions.length >= 2, 'a multi-shape volley should be rendered');
   const beforeResizeCount = positions.length;
 
-  const testViewports = [[360,1280],[360,840],[360,640],[600,800],[800,800],[1066,800],[1422,800],[1680,720],[2560,720],[360,800]];
+  const testViewports = [[360,1280],[360,840],[360,640],[600,800],[800,800],[1066,800],[1422,800],[1680,720],[2560,720],[7680,4320],[360,800]];
   let frameTime = 32 + 21 * 16;
   for (const [width, height] of testViewports) {
     window.innerWidth = width;
     window.innerHeight = height;
     for (const callback of windowListeners.resize || []) callback();
-    assert.equal(els.game.width, Math.round(width * 2), `canvas backing width should respect DPR at ${width}x${height}`);
-    assert.equal(els.game.height, Math.round(height * 2), `canvas backing height should respect DPR at ${width}x${height}`);
+    const expectedDpr = Math.min(2, Math.sqrt(12000000 / (width * height)));
+    assert.equal(els.game.width, Math.round(width * expectedDpr), `adaptive HUD width should respect pixel budget at ${width}x${height}`);
+    assert.equal(els.game.height, Math.round(height * expectedDpr), `adaptive HUD height should respect pixel budget at ${width}x${height}`);
+    assert.equal(els.scene3d.width, Math.max(1, Math.floor(width * expectedDpr)), `WebGL width should use the adaptive scale at ${width}x${height}`);
+    assert.equal(els.scene3d.height, Math.max(1, Math.floor(height * expectedDpr)), `WebGL height should use the adaptive scale at ${width}x${height}`);
     frame(++frameTime);
     assert.equal(uniquePositions().length, beforeResizeCount, `resize should preserve active shapes at ${width}x${height}`);
   }
