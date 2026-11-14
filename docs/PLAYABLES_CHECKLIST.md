@@ -14,13 +14,22 @@ Use this checklist before submitting a build to the official YouTube Playables T
 - [ ] Resume from the SDK callback; confirm the run resumes without resetting positions.
 - [ ] Toggle YouTube audio; confirm the game follows the setting and produces no sound when disabled.
 
-## Aspect ratios, viewport and input
+## 3D renderer, aspect ratios, viewport and input
+
+- [ ] Verify `renderer3d.js` loads after the YouTube SDK and before the game bootstrap.
+- [ ] Verify the WebGL renderer starts on a WebGL-capable browser and draws beveled 3D meshes with lighting.
+- [ ] Disable WebGL or simulate a context loss; verify the Canvas 2D fallback remains playable.
+- [ ] Verify a WebGL context loss does not leave a blank or frozen game.
+- [ ] Verify the WebGL and HUD canvases stay aligned after a viewport resize.
+- [ ] Check device-pixel scaling on high-DPI mobile and desktop hardware; confirm GPU limits do not cause blank frames or memory spikes.
+
 
 Test portrait, square, standard landscape, and ultrawide layouts. YouTube guidance gives examples including 9:32, 9:21, 9:16, 3:4, 1:1, 4:3, 16:9, 21:9, and 32:9.
 
 - [ ] Resize while shapes are in flight; verify the run continues and shapes remain usable.
 - [ ] Check at a small mobile viewport such as 360 × 800 CSS pixels.
 - [ ] Check at a large desktop viewport such as 1920 × 1080 and a high-DPI device.
+- [ ] Check a high-resolution desktop display (for example 3840 × 2560); inspect 3D edges, HUD text, and performance. Do not assume every device can allocate a native 8K framebuffer.
 - [ ] Confirm HUD text remains legible and controls respect safe-area insets.
 - [ ] Verify touch drag and mouse click-drag both slice shapes.
 - [ ] Verify `Enter` / `Space` start from the title and `P` / `Esc` pause and resume.
@@ -38,6 +47,7 @@ Test portrait, square, standard landscape, and ultrawide layouts. YouTube guidan
 - [ ] Daily theme is consistent through one UTC day and rotates on the next day.
 - [ ] Sound is triggered only after user interaction and respects the SDK setting.
 - [ ] Confirm no reproducible crashes, console errors, or frame stalls during a longer session.
+- [ ] Test on real Android/iOS devices and desktop browsers; mocked WebGL is not a substitute for actual GPU testing.
 
 ## Bundle checks
 
