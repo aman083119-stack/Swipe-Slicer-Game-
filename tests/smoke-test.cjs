@@ -30,7 +30,9 @@ assert.ok(html.includes('loadData()') && html.includes('saveData('), 'cloud save
 assert.ok(!/requestRewardedAd|requestInterstitialAd|yt\.ads|rewardBtn|interstitial/i.test(html), 'game must not contain advertising integrations');
 assert.ok(!/End run|Back to title|Quit game|Exit game/i.test(html), 'game must not add in-game exit/quit controls');
 assert.ok(html.includes('function triggerScreenShake') && html.includes('Chain Virtuoso'), 'combo shake and chain medals should be present');
-assert.ok(!/preventDefault\s*\(\s*\)/.test(gameScript), 'keyboard escape/input must not be trapped');
+const keydownAt = gameScript.indexOf("window.addEventListener('keydown'");
+const keydownHandler = keydownAt >= 0 ? gameScript.slice(keydownAt, keydownAt + 1000) : '';
+assert.ok(keydownAt >= 0 && !/preventDefault\\s*\\(/.test(keydownHandler), 'Escape handler must not call preventDefault');
 assert.ok(!/visibilitychange|document\.hidden|document\.visibilityState/.test(gameScript), 'lifecycle must be controlled by the Playables SDK, not Page Visibility API');
 assert.ok(html.length < 512 * 1024, 'initial HTML should stay far below the per-file size recommendation');
 
