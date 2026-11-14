@@ -101,6 +101,30 @@ There is **no single fixed Playables resolution to target**. The game uses the v
 
 The local smoke test validates package structure, SDK script ordering, the presence of core integration hooks, responsive viewport support, and the absence of monetization API calls. **It does not replace the official YouTube Test Suite or guarantee certification.**
 
+## 📦 Create the YouTube Playables upload bundle
+
+The WebGL scene is loaded from the relative file `renderer3d.js`, so **do not upload `index.html` by itself**. The Playables ZIP must have both files at its root:
+
+```text
+swipe-slicer-playables.zip
+├── index.html
+└── renderer3d.js
+```
+
+From the repository root, create the minimal upload bundle with either command:
+
+```bash
+zip -j swipe-slicer-playables.zip index.html renderer3d.js
+```
+
+PowerShell on Windows:
+
+```powershell
+Compress-Archive -Path index.html,renderer3d.js -DestinationPath swipe-slicer-playables.zip -Force
+```
+
+The renderer uses a 12-megapixel adaptive backing-store budget shared with the HUD. This keeps the scene scalable on high-resolution displays while avoiding an unconditional native 8K framebuffer allocation. The actual maximum resolution depends on the browser and GPU.
+
 ## 🛠 Development and testing
 
 Requires Node.js 20 or newer for the small built-in smoke test. The game itself has **zero runtime dependencies**.
