@@ -288,11 +288,11 @@
         const depth=Number(shape.depth)||0;
         const tiltX=(shape.tiltX||0)+Math.sin(seconds*1.25+(shape.x||0)*.01)*.12;
         const tiltY=(shape.tiltY||0)+Math.cos(seconds*1.15+(shape.y||0)*.01)*.15;
-        const rotation=shape.rotation||0;
+        const rotation=(shape.rotation||0)+(shape.type==='diamond'?Math.PI/4:0);
         const type=shape.bomb?'bomb':(meshes[shape.type]?shape.type:'circle');
         const mesh=meshes[type];
         const color=shape.bomb?[.045,.055,.09]:colorVector(shape.color);
-        gl.uniform2f(uCenter,(shape.x||0)+dx,height-(shape.y||0)+dy);
+        gl.uniform2f(uCenter,(shape.x||0)+dx,(shape.y||0)+dy);
         gl.uniform1f(uRadius,r);
         gl.uniform1f(uDepth,depth);
         gl.uniform3f(uRotation,tiltX,tiltY,rotation);
