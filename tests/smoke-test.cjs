@@ -15,7 +15,7 @@ assert.ok(fs.existsSync(renderer3dPath), 'the 3D renderer file must be included 
 const renderer3dSource = fs.readFileSync(renderer3dPath, 'utf8');
 assert.ok(html.includes('<canvas id="scene3d"'), 'the game must include its WebGL scene canvas');
 assert.ok(html.includes('<script src="./renderer3d.js"></script>'), 'the game must load the local WebGL renderer');
-assert.ok(/getContext\\('webgl'/.test(renderer3dSource), 'renderer must request standard WebGL');
+assert.ok(renderer3dSource.includes("getContext('webgl'"), 'renderer must request standard WebGL');
 assert.ok(/compileShader/.test(renderer3dSource) && /drawArrays/.test(renderer3dSource), 'renderer must compile shaders and draw 3D geometry');
 assert.ok(/getRenderScale/.test(renderer3dSource), 'renderer must expose adaptive framebuffer scale');
 
