@@ -383,6 +383,7 @@
         this.id = id; this.x = x; this.y = y; this.vx = vx; this.vy = vy;
         this.color = color; this.type = type; this.bomb = bomb; this.wildcard = type === 'prism'; this.r = Math.max(20, Math.min(30, W * .037));
         this.rotation = Math.random() * Math.PI * 2; this.spin = (Math.random() - .5) * 2.8;
+        this.depth = (Math.random() - .5) * 90; this.tiltX = (Math.random() - .5) * .42; this.tiltY = (Math.random() - .5) * .42;
         this.sliced = false;
       }
       update(dt) {
