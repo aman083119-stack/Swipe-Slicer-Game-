@@ -3,14 +3,14 @@
 </p>
 
 <p align="center">
-  <img alt="HTML5 Canvas" src="https://img.shields.io/badge/HTML5-Canvas-e85d3f?style=for-the-badge&logo=html5&logoColor=white">
+  <img alt="WebGL 3D" src="https://img.shields.io/badge/Graphics-WebGL%203D-6d67ff?style=for-the-badge">
   <img alt="YouTube Playables" src="https://img.shields.io/badge/YouTube-Playables-ff0033?style=for-the-badge&logo=youtube&logoColor=white">
   <img alt="No dependencies" src="https://img.shields.io/badge/Dependencies-None-48c78e?style=for-the-badge">
   <img alt="No monetization" src="https://img.shields.io/badge/Ads-Not%20included-6875f5?style=for-the-badge">
 </p>
 
 <h1 align="center">Swipe Slicer</h1>
-<p align="center"><strong>Slice combos, not just shapes.</strong><br>A tactile neon arcade game built around color-chain skill, not random swiping.</p>
+<p align="center"><strong>Slice combos, not just shapes.</strong><br>A neon arcade game with real-time WebGL 3D shapes, glossy bevels, cinematic lighting, and color-chain skill.</p>
 
 <p align="center">
   <a href="https://developers.google.com/youtube/gaming/playables/reference/sdk">Playables SDK</a> ·
@@ -22,10 +22,12 @@
 
 ## ✦ The game
 
-Shapes rise from the bottom in fizzy, physics-driven volleys. Swipe through them in a single continuous movement and keep the same color flowing to grow your chain. Color changes break the chain; a rare **Prism** shape bridges colors, and a six-shape chain triggers **Chromatic Fever** for four seconds of double points.
+Glossy, beveled 3D shapes rise from the bottom in physics-driven volleys. Real-time WebGL lighting adds depth, specular highlights, and an animated procedural environment. Swipe through them in a single continuous movement and keep the same color flowing to grow your chain. Color changes break the chain; a rare **Prism** shape bridges colors, and a six-shape chain triggers **Chromatic Fever** for four seconds of double points.
 
 | Feature | How it plays |
 |---|---|
+| **Real-time 3D graphics** | Beveled polygon meshes, a 3D bomb sphere, per-pixel lighting, glossy highlights, and a procedural animated environment rendered in WebGL 1. |
+| **Adaptive resolution** | High-DPI rendering scales to the device pixel ratio, viewport, and GPU framebuffer limits. |
 | **Color-chain scoring** | Same-color shapes in one swipe build a larger chain bonus. Lift to bank your score. |
 | **Chromatic Fever** | Reach a chain of 6 to activate a short double-score burst. |
 | **Prism wildcard** | Rare rainbow prisms link your current chain into the next color. |
@@ -76,11 +78,12 @@ The current build includes the following integrations:
 | Lifecycle | Registers `onPause()` / `onResume()`, suspends the loop and audio while paused, and saves progress on pause. |
 | Score | Submits the best score through `sendScore()` only after the same best score has been saved successfully. |
 | Health | Reports runtime errors and SDK integration warnings when the health APIs are available. |
-| Responsive viewport | Full-viewport canvas, high-DPI backing store, safe-area UI, and coordinate-preserving resize handling. |
+| Responsive viewport | Full-viewport 3D scene and transparent HUD canvas, high-DPI backing stores, safe-area UI, and coordinate-preserving resize handling. |
+| Graphics fallback | WebGL initializes when available; if unavailable or lost, the Canvas 2D rendering path remains playable. |
 
 ### Resolution and aspect ratio
 
-There is **no single fixed Playables resolution to target**. The game uses the viewport it is given and is designed to resize without restarting the run. YouTube's current design guidance calls out extreme and common ratios including **9:32, 9:21, 9:16, 3:4, 1:1, 4:3, 16:9, 21:9, and 32:9**. The canvas fills the available viewport, scales its backing store for high-density displays, and adapts HUD spacing to screen width. Device orientation is not locked.
+There is **no single fixed Playables resolution to target**. The game uses the viewport it is given and is designed to resize without restarting the run. YouTube's current design guidance calls out extreme and common ratios including **9:32, 9:21, 9:16, 3:4, 1:1, 4:3, 16:9, 21:9, and 32:9**. The scene fills the available viewport and uses adaptive device-pixel scaling rather than hard-coding an 8K framebuffer. It is designed to remain crisp on HD and 4K-class displays and very high-density screens; the actual pixel ceiling depends on the device GPU and browser. Device orientation is not locked.
 
 ### Certification / test checklist
 
@@ -90,7 +93,8 @@ There is **no single fixed Playables resolution to target**. The game uses the v
 - [x] Pause/resume and audio-setting callbacks are wired.
 - [x] Cloud data is loaded before any cloud save attempt.
 - [x] Game data stays far below the 3 MiB save limit; initial HTML is far below the 30 MiB bundle limit.
-- [x] Responsive canvas, touch and mouse input, and keyboard pause/resume are implemented.
+- [x] Responsive WebGL scene + Canvas HUD, touch and mouse input, and keyboard pause/resume are implemented.
+- [x] WebGL context creation has a Canvas 2D fallback path.
 - [x] No ad, rewarded-ad, interstitial-ad, or payment integration is included.
 - [ ] Run the official YouTube Playables Test Suite with the uploaded build.
 - [ ] Complete Developer Portal metadata and the review / release process.
@@ -123,6 +127,7 @@ These are suggestions only; the current game intentionally keeps its core loop q
 ```text
 .
 ├── index.html                     # Game + Playables SDK integration
+├── renderer3d.js                  # Real-time WebGL 1 3D renderer
 ├── README.md                      # Project overview and setup
 ├── package.json                   # npm test shortcut; no dependencies
 ├── tests/
