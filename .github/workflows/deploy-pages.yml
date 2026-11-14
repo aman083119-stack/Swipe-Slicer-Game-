@@ -29,6 +29,7 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html _site/index.html
+          cp renderer3d.js _site/renderer3d.js
           touch _site/.nojekyll
       - name: Upload site
         uses: actions/upload-pages-artifact@v4
